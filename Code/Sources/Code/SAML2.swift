@@ -11,6 +11,16 @@ struct SAMLURL {
     let xml: String
     let baseURL: String
     
+    
+    
+//    +(NSURL *)createAuthnRequestUrl:(WebFormAuthSettings *)settings {
+//        NSString *xml = [AuthenticationSAMLRequest createAuthnRequestXml:settings];
+//        NSData *compressed = [[xml dataUsingEncoding:NSUTF8StringEncoding] zlibCompressed];
+//        NSString *encoded = [[compressed base64EncodedStringWithOptions:0] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet alphanumericCharacterSet]];
+//        NSString *urlString = [NSString stringWithFormat:@"%@?%@=%@", settings.webFormBaseURL, REQUEST_QUERY_PARAMETER, encoded];
+//        return [[NSURL alloc] initWithEncodedString:urlString];
+    
+    
     var request: URLRequest? {
         guard let encodedRequest = xml
             .data(using: .utf8)?
@@ -30,7 +40,8 @@ public struct AuthnRequest {
     // static
     private let ID: String = with("E" + UUID().uuidString) { $0.removeLast() }
     private let issuerInstant = ISO8601DateFormatter().string(from: Date())
-    let redirectURI = "https://mobileapp.epic.com/SAML/redirect"
+    static let redirectURI = "https://mobileapp.epic.com/SAML/redirect"
+    let redirectURI = AuthnRequest.redirectURI
     
     // dynamic
     var protocolBinding: Bindings = .post
@@ -52,7 +63,7 @@ public struct AuthnRequest {
     var userDomain = "epic.com"
     
     // Didn't use in successful attempt
-    private let extensions = "<epic:Attribute Name=\"OS\">iOS</epic:Attribute>"
+    private let extensions = #"<epic:Attribute Name="OS">iOS</epic:Attribute>"#
     
     // options
     var includeSubject: Boolean = .false
@@ -67,7 +78,7 @@ extension AuthnRequest {
     
     // Compute xml
     public var xml: String {"""
-        <?xml version="1.0" encoding="UTF-8"?>
+    <?xml version="1.0" encoding="UTF-8"?>
         <samlp:AuthnRequest xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
           xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
           xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
@@ -76,30 +87,30 @@ extension AuthnRequest {
           Version="2.0"
           IssueInstant="\(issuerInstant)"
           Destination="\(destination)"
-          ProtocolBinding="\(protocolBinding)"
+          ProtocolBinding="\(protocolBinding.rawValue)"
           AssertionConsumerServiceURL="\(redirectURI)"
           ProviderName="Epic Testing">
           <saml:Issuer xmlns="urn:oasis:names:tc:SAML:2.0:assertion"
               \(includeIssuerNameQualifier.isTrue ? issuerNameQualifierAttribute : "")
               \(includeIssuerSPNameQualifier.isTrue ? issuerSPNameQualifierAttribute : "")
-              Format="\(issuerFormat)">\(issuerValue)</saml:Issuer>
+              Format="\(issuerFormat.rawValue)">\(issuerValue)</saml:Issuer>
           \(includeExtensions.isTrue ? extensionsNode : "")
           \(includeSubject.isTrue ? subjectNode : "")
-          <samlp:NameIDPolicy Format="\(nameIDPolicyFormat)" />
-          <samlp:RequestedAuthnContext Comparison="\(requestedAuthnContextComparison)">
-              <saml:AuthnContextClassRef>\(authnContextClass)</saml:AuthnContextClassRef>
+          <samlp:NameIDPolicy Format="\(nameIDPolicyFormat.rawValue)" />
+          <samlp:RequestedAuthnContext Comparison="\(requestedAuthnContextComparison.rawValue)">
+              <saml:AuthnContextClassRef>\(authnContextClass.rawValue)</saml:AuthnContextClassRef>
           </samlp:RequestedAuthnContext>
         </samlp:AuthnRequest>
-    """}
+    """.replacingOccurrences(of: "\n", with: "")}
     
     // private helper
-    private var subjectNode: String {"""
+    private var subjectNode: String {#"""
         <saml:Subject>
           <saml:NameID
-            Format="\(nameIDFormat)"
-            NameQualifier="\(userDomain)">\(userName)</saml:NameID>
+            Format="\#(nameIDFormat.rawValue)"
+            NameQualifier="\#(userDomain)">\#(userName)</saml:NameID>
         </saml:Subject>
-    """}
+    """#}
     
     // private helper
     private var extensionsNode: String {"""
@@ -139,12 +150,12 @@ struct AuthnResponse {
 
 // MARK: SAML2 Constants
 
-enum Bindings : String {
+enum Bindings : String, CaseIterable {
     case redirect = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
     case post = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
 }
 
-enum NameIdFormat : String {
+enum NameIdFormat : String, CaseIterable {
     case persistent = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
     case transient = "urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
     case emailAddress = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
@@ -155,11 +166,11 @@ enum NameIdFormat : String {
     case entity = "urn:oasis:names:tc:SAML:2.0:nameid-format:entity"
 }
 
-enum AuthnContextComparison : String {
+enum AuthnContextComparison : String, CaseIterable {
     case exact = "exact"
 }
 
-enum AuthnContextClass : String {
+enum AuthnContextClass : String, CaseIterable {
     case epcs = "urn:healthcare:saml:workflows:MOBILEEPCS"
     case INTERNET_PROTOCOL = "urn:oasis:names:tc:SAML:2.0:ac:classes:InternetProtocol"
     case INTERNET_PROTOCOL_PASSWORD = "urn:oasis:names:tc:SAML:2.0:ac:classes:InternetProtocolPassword"
@@ -188,10 +199,86 @@ enum AuthnContextClass : String {
     case UNSPECIFIED = "urn:oasis:names:tc:SAML:2.0:ac:classes:unspecified"
 }
 
-enum Boolean {
+enum Boolean: String, CaseIterable {
     case `true`
     case `false`
     var isTrue: Bool {
         self == .true
+    }
+}
+
+// MARK: Extensions for UI
+
+extension Bindings : CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .redirect: return "HTTP-Redirect"
+        case .post: return "HTTP-POST"
+        }
+    }
+}
+
+extension NameIdFormat : CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .persistent: return "persistent"
+        case .transient: return "transient"
+        case .emailAddress: return "emailAddress"
+        case .unspecified: return "unspecified"
+        case .x509SubjectName: return "X509SubjectName"
+        case .windowsDomainQualifiedName: return "WindowsDomainQualifiedName"
+        case .kerberos: return "kerberos"
+        case .entity: return "entity"
+        }
+    }
+}
+
+extension AuthnContextComparison : CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .exact: return "exact"
+        }
+    }
+}
+
+extension AuthnContextClass : CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .epcs: return "MobileEPCS"
+        case .INTERNET_PROTOCOL: return "InternetProtocol"
+        case .INTERNET_PROTOCOL_PASSWORD: return "InternetProtocolPassword"
+        case .KERBEROS: return "Kerberos"
+        case .MOBILE_ONE_FACTOR_UNREGISTERED: return "MobileOneFactorUnregistered"
+        case .MOBILE_TWO_FACTOR_UNREGISTERED: return "MobileTwoFactorUnregistered"
+        case .MOBILE_ONE_FACTOR_CONTRACT: return "MobileOneFactorContract"
+        case .MOBILE_TWO_FACTOR_CONTRACT: return "MobileTwoFactorContract"
+        case .PASSWORD: return "Password"
+        case .PASSWORD_PROTECTED_TRANSPORT: return "PasswordProtectedTransport"
+        case .PREVIOUS_SESSION: return "PreviousSession"
+        case .X509: return "X509"
+        case .PGP: return "PGP"
+        case .SPKI: return "SPKI"
+        case .XMLDSIG: return "XMLDSig"
+        case .SMARTCARD: return "Smartcard"
+        case .SMARTCARD_PKI: return "SmartcardPKI"
+        case .SOFTWARE_PKI: return "SoftwarePKI"
+        case .TELEPHONY: return "Telephony"
+        case .NOMAD_TELEPHONY: return "NomadTelephony"
+        case .PERSONAL_TELEPHONY: return "PersonalTelephony"
+        case .AUTHENTICATED_TELEPHONY: return "AuthenticatedTelephony"
+        case .SECURED_REMOTE_PASSWORD: return "SecureRemotePassword"
+        case .TLS_CLIENT: return "TLSClient"
+        case .TIME_SYNC_TOKEN: return "TimeSyncToken"
+        case .UNSPECIFIED: return "unspecified"
+        }
+    }
+}
+
+extension Boolean: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .`true`: return "True"
+        case .`false`: return "False"
+        }
     }
 }

@@ -14,7 +14,7 @@ struct ContentView: View {
         NavigationView {
             WebViewAuthenticationTesting()
                 .navigationTitle("SAML Testing")
-        }
+        }.accentColor(.purple)
     }
 }
 

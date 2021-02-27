@@ -1,12 +1,9 @@
 import Foundation
-//import Code
 
 
-enum AuthnContextComparison : String {
-    case exact = "exact"
-}
+let a = """
+hello "my name"
+what "are" you doing today?
+"""
 
-let a: AuthnContextComparison = .exact
-print("\(a)")
-
-
+print(a)
