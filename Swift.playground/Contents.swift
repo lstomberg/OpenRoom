@@ -1,5 +1,12 @@
 import Foundation
-import Code
+//import Code
 
-let c = Code()
-c.text
+
+enum AuthnContextComparison : String {
+    case exact = "exact"
+}
+
+let a: AuthnContextComparison = .exact
+print("\(a)")
+
+

@@ -9,11 +9,12 @@ import SwiftUI
 import Code
 
 struct ContentView: View {
-    let testCode = Code()
     
     var body: some View {
-        Text(testCode.text)
-            .padding()
+        NavigationView {
+            WebViewAuthenticationTesting()
+                .navigationTitle("SAML Testing")
+        }
     }
 }
 
